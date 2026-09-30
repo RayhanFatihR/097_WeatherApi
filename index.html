@@ -29,5 +29,54 @@
       <tr><td>Latitude</td><td id="lat"></td></tr>
     </table>
     <p id="pesan"></p>
+
+    <script>
+    const API_KEY = "0uHfzelXJpJMUL6vAJl9";
+
+    async function cariLokasi() {
+      const q = document.getElementById("lokasi").value.trim();
+      const pesan = document.getElementById("pesan");
+      const tabel = document.getElementById("hasil");
+      if (!q) { pesan.textContent = "Isi lokasi dulu."; return; }
+
+      pesan.textContent = "Memuat...";
+      tabel.style.display = "none";
+
+      try {
+        const url = `https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json?key=${API_KEY}&language=id`;
+        const res = await fetch(url);
+        const data = await res.json();
+        console.log(data);
+
+        if (!data.features || data.features.length === 0) {
+          pesan.textContent = "Lokasi tidak ditemukan.";
+          return;
+        }
+
+        const f = data.features[0];
+        const ctx = f.context || [];
+        // cari komponen alamat berdasarkan tipe
+        const ambil = (...tipe) => {
+          const c = ctx.find(x => tipe.some(t => x.id.startsWith(t)));
+          return c ? c.text : "-";
+        };
+        // jika hasil utama itu sendiri sebuah negara/provinsi/kecamatan
+        const jenis = f.place_type ? f.place_type[0] : "";
+
+        document.getElementById("nama").textContent = f.place_name;
+        document.getElementById("negara").textContent = jenis === "country" ? f.text : ambil("country");
+        document.getElementById("provinsi").textContent = jenis === "region" ? f.text : ambil("region");
+        document.getElementById("kecamatan").textContent =
+          ["municipality", "county", "subregion"].includes(jenis) ? f.text : ambil("municipality", "county", "subregion", "locality");
+        document.getElementById("lon").textContent = f.center[0];
+        document.getElementById("lat").textContent = f.center[1];
+
+        tabel.style.display = "table";
+        pesan.textContent = "";
+      } catch (e) {
+        pesan.textContent = "Error: " + e.message;
+      }
+    }
+  </script>
 </body>
 </html>
